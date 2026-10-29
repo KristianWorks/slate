@@ -53,6 +53,15 @@ $statusLabels = [
                 <span class="muted">&middot; <?= (int) $appt['service_duration'] ?> min &middot; &#8369;<?= e(number_format((float) $appt['service_price'], 2)) ?></span>
             </span>
         </div>
+        <?php if (!empty($appt['series_id'])): ?>
+            <div class="panel-row">
+                <span class="panel-label">Recurring</span>
+                <span class="panel-value">
+                    <i data-lucide="repeat" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+                    Part of a recurring series (#<?= (int) $appt['series_id'] ?>)
+                </span>
+            </div>
+        <?php endif ?>
     </section>
 
     <section class="panel-section">

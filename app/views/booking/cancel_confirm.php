@@ -41,6 +41,18 @@
     <div class="confirm-actions">
         <form action="/booking/<?= e($token) ?>/cancel" method="post" style="margin: 0;">
             <?= csrf_field() ?>
+            <?php if (!empty($appt['series_id'])): ?>
+                <fieldset style="border: 0; padding: 0; margin: 0 0 16px;">
+                    <label class="terms-row" style="margin-bottom: 8px;">
+                        <input type="radio" name="scope" value="this" checked>
+                        <span>Just this appointment</span>
+                    </label>
+                    <label class="terms-row">
+                        <input type="radio" name="scope" value="all_future">
+                        <span>This and all future appointments in the series</span>
+                    </label>
+                </fieldset>
+            <?php endif ?>
             <button type="submit" class="btn btn-danger">Yes, cancel this appointment</button>
         </form>
         <a href="/booking/<?= e($token) ?>" class="btn btn-outline">Keep my appointment</a>

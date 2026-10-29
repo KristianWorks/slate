@@ -129,6 +129,18 @@ It took two read-throughs of every datetime in the codebase to get this right. T
 
 ---
 
+## Since the first write-up: API, webhooks, and a real test suite
+
+The paragraphs above describe the project at its six-week mark. Three things got added afterward that are worth their own note, because each one was a small amount of *new* code riding on top of a lot of *existing* code — which is the payoff of having built the core booking engine honestly the first time.
+
+**The public REST API** (`/api/v1/*`) turned out to be mostly a response-format problem, not a new-feature problem. `ApiController` is a thin base class — a JSON envelope, a Bearer-token check for the admin endpoints, a rate limiter — sitting on top of the exact same `SlotGenerator`, `Appointment`, and `Service` models the web UI already used. There's one source of truth for "is this slot available," whether the caller is a browser or a cURL script. `/api/docs` documents it with real request/response bodies instead of a Swagger file, in keeping with "no build step."
+
+**Outbound webhooks** came from the obvious next question once an API existed: how does a third-party system find out about a *new* booking without polling? `WebhookDispatcher` signs a payload (HMAC-SHA256, so receivers can verify it actually came from Slate) and enqueues it — delivery happens on a cron tick (`ProcessWebhooks.php`), not synchronously inside the request that created the booking, so a slow or dead receiver URL can never make a customer's booking request hang. Backoff (60s → 5min → 30min) and auto-disable after 10 failures came from having been on the receiving end of webhook storms from other people's badly-behaved senders before.
+
+**A real PHPUnit suite** was the part I put off longest and regretted putting off. `tests/TestCase.php` truncates and reseeds a dedicated `slate_test` database before every test, which made the race-condition test (`test_two_concurrent_bookings_for_the_same_slot_only_one_succeeds`) possible to write and trust — it actually opens two connections and fires near-simultaneous inserts at the same slot, rather than asserting on a mocked lock. Feature tests drive the controllers directly (no HTTP layer, no browser), catching a `TestRedirect` exception that `redirect()` throws instead of calling `exit()` when `APP_TESTING` is defined. CI runs the suite against a real MySQL service container on every push.
+
+---
+
 ## What I'd build next
 
 In rough order of how much I want to:
@@ -140,8 +152,6 @@ In rough order of how much I want to:
 3. **Recurring appointments.** A `appointments.recurrence_rule` column (RFC 5545 RRULE syntax) plus an expansion job that materialises the next 90 days of instances. UI would need a "repeats" widget in the booking form and an "applies to all future" / "only this one" choice in the cancel/reschedule flow.
 
 4. **Multi-staff support.** The biggest schema change of the four. Add `staff_id` to `services`, `appointments`, and `business_hours`. The `SlotGenerator` takes a staff filter. The admin gets a "team" management page.
-
-5. **Public REST API.** `/api/v1/services`, `/api/v1/availability`, `/api/v1/bookings` with key-based auth. The Router supports it today; needs a JSON response helper and an `ApiController` namespace. The booking flow itself would be largely the same code — just a different output adapter.
 
 ---
 

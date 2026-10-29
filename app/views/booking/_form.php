@@ -101,6 +101,22 @@
         <?php endif ?>
     </div>
 
+    <div class="field" style="margin-bottom: 18px;">
+        <label for="bf-repeat">Repeats</label>
+        <select id="bf-repeat" name="repeat" class="<?= errors('repeat') !== null ? 'is-invalid' : '' ?>">
+            <?php $currentRepeat = old('repeat', 'none'); ?>
+            <option value="none"     <?= $currentRepeat === 'none'     ? 'selected' : '' ?>>Doesn&rsquo;t repeat</option>
+            <option value="weekly"   <?= $currentRepeat === 'weekly'   ? 'selected' : '' ?>>Every week</option>
+            <option value="biweekly" <?= $currentRepeat === 'biweekly' ? 'selected' : '' ?>>Every 2 weeks</option>
+            <option value="monthly"  <?= $currentRepeat === 'monthly'  ? 'selected' : '' ?>>Every month</option>
+        </select>
+        <?php if ($msg = errors('repeat')): ?>
+            <p class="field-error"><?= e($msg) ?></p>
+        <?php else: ?>
+            <p class="muted" style="font-size: 0.8rem; margin: 4px 0 0;">Future dates are booked automatically at this same day and time.</p>
+        <?php endif ?>
+    </div>
+
     <label class="terms-row">
         <input type="checkbox"
                name="terms"

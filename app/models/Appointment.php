@@ -71,7 +71,7 @@ final class Appointment
     public static function findById(int $id): ?array
     {
         return Database::getInstance()->fetch(
-            "SELECT a.id, a.user_id, a.service_id,
+            "SELECT a.id, a.user_id, a.series_id, a.service_id,
                     a.customer_name, a.customer_email, a.customer_phone,
                     a.starts_at, a.ends_at, a.status, a.notes,
                     a.cancel_token, a.created_at, a.updated_at,
@@ -95,7 +95,7 @@ final class Appointment
     public static function findByToken(string $token): ?array
     {
         return Database::getInstance()->fetch(
-            "SELECT a.id, a.user_id, a.service_id,
+            "SELECT a.id, a.user_id, a.series_id, a.service_id,
                     a.customer_name, a.customer_email, a.customer_phone,
                     a.starts_at, a.ends_at, a.status, a.notes,
                     a.cancel_token, a.created_at, a.updated_at,
@@ -118,6 +118,25 @@ final class Appointment
             data:  ['status' => 'cancelled'],
             where: ['id' => $id],
         );
+    }
+
+    /**
+     * Cancels every not-yet-started, still-active appointment in a series
+     * except the one the customer is already looking at (it's cancelled
+     * separately by the caller). Used by the "this and all future" option
+     * when cancelling a recurring booking.
+     */
+    public static function cancelFutureInSeries(int $seriesId, int $exceptId): int
+    {
+        return Database::getInstance()->query(
+            "UPDATE appointments
+                SET status = 'cancelled'
+              WHERE series_id = :series_id
+                AND id <> :except_id
+                AND status IN ('pending','confirmed')
+                AND starts_at > NOW()",
+            ['series_id' => $seriesId, 'except_id' => $exceptId],
+        )->rowCount();
     }
 
     public static function reschedule(
@@ -162,7 +181,7 @@ final class Appointment
         [$where, $params] = self::buildWhere($filters);
         $order = (($filters['order'] ?? 'asc') === 'desc') ? 'DESC' : 'ASC';
 
-        $sql = "SELECT a.id, a.user_id, a.service_id,
+        $sql = "SELECT a.id, a.user_id, a.series_id, a.service_id,
                        a.customer_name, a.customer_email, a.customer_phone,
                        a.starts_at, a.ends_at, a.status, a.notes,
                        a.cancel_token, a.created_at, a.updated_at,

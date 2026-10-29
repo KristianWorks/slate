@@ -78,7 +78,12 @@ $emptyCopy = match (true) {
                 </div>
 
                 <div class="appt-service">
-                    <div class="svc-name"><?= e((string) $r['service_name']) ?></div>
+                    <div class="svc-name">
+                        <?= e((string) $r['service_name']) ?>
+                        <?php if (!empty($r['series_id'])): ?>
+                            <i data-lucide="repeat" class="muted" style="width: 13px; height: 13px; vertical-align: -2px;" title="Recurring"></i>
+                        <?php endif ?>
+                    </div>
                     <div class="svc-meta"><?= (int) $r['service_duration'] ?> min</div>
                 </div>
 

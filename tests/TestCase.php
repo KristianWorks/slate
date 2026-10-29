@@ -23,6 +23,7 @@ abstract class TestCase extends PHPUnitTestCase
     private const TABLES = [
         'email_log',
         'appointments',
+        'appointment_series',
         'blocked_dates',
         'business_hours',
         'services',
@@ -183,6 +184,31 @@ abstract class TestCase extends PHPUnitTestCase
                FROM appointments a
                JOIN services s ON s.id = a.service_id
               WHERE a.id = :id",
+            ['id' => $id],
+        );
+    }
+
+    /** @param array<string,mixed> $overrides */
+    protected function createSeries(array $overrides = []): array
+    {
+        $defaults = [
+            'service_id'       => 1,
+            'customer_name'    => 'Test Customer',
+            'customer_email'   => 'test@example.com',
+            'customer_phone'   => '+1 555-1234',
+            'notes'            => null,
+            'freq'             => 'weekly',
+            'byweekday'        => 2,
+            'start_time'       => '10:00:00',
+            'duration_minutes' => 60,
+            'starts_on'        => date('Y-m-d', strtotime('+1 day')),
+            'ends_on'          => null,
+            'status'           => 'active',
+        ];
+        $data = array_merge($defaults, $overrides);
+        $id   = Database::getInstance()->insert('appointment_series', $data);
+        return Database::getInstance()->fetch(
+            'SELECT * FROM appointment_series WHERE id = :id',
             ['id' => $id],
         );
     }

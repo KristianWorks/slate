@@ -28,10 +28,12 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Middleware\RateLimit;
 use App\Models\Appointment;
+use App\Models\AppointmentSeries;
 use App\Models\BlockedDate;
 use App\Models\BusinessHour;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Services\AppointmentBooker;
 use App\Services\IcsGenerator;
 use App\Services\Mailer;
 use App\Services\SlotGenerator;
@@ -168,57 +170,53 @@ final class BookingController
             redirect('/book?service_id=' . (int) $service['id']);
         }
 
-        // --- Race-safe insert -------------------------------------------------
-        $db = Database::getInstance();
-        $db->beginTransaction();
-        try {
-            // FOR UPDATE locks both matching rows and (under REPEATABLE READ) the gap.
-            $conflicts = $db->fetchAll(
-                "SELECT id FROM appointments
-                  WHERE status IN ('pending','confirmed')
-                    AND starts_at < :end
-                    AND ends_at   > :start
-                  FOR UPDATE",
-                ['start' => $startsAtStr, 'end' => $endsAtStr],
-            );
-            if ($conflicts !== []) {
-                $db->rollBack();
-                logger()->warning('Slot conflict on booking', [
-                    'service_id' => (int) $service['id'],
-                    'starts_at'  => $startsAtStr,
-                    'ends_at'    => $endsAtStr,
-                    'conflict_ids' => array_map(static fn($r) => (int) $r['id'], $conflicts),
-                    'customer_email' => $input['email'],
-                ]);
-                flash('error', 'Sorry, that slot was just taken. Please pick another time.');
-                redirect('/book?service_id=' . (int) $service['id']);
-            }
+        // TODO: when Stripe is integrated, set status='pending' until payment
+        //       intent succeeds; flip to 'confirmed' on webhook.
+        $result = AppointmentBooker::book([
+            'service_id'     => (int) $service['id'],
+            'customer_name'  => $input['name'],
+            'customer_email' => $input['email'],
+            'customer_phone' => $input['phone'],
+            'starts_at'      => $startsAtStr,
+            'ends_at'        => $endsAtStr,
+            'notes'          => $input['notes'] !== '' ? $input['notes'] : null,
+            'user_id'        => current_user_id(),
+        ]);
 
-            $token = bin2hex(random_bytes(16)); // 32 hex chars
-
-            // TODO: when Stripe is integrated, set status='pending' until payment
-            //       intent succeeds; flip to 'confirmed' on webhook.
-            $apptId = (int) $db->insert('appointments', [
-                'user_id'        => current_user_id(),
+        if (!$result['ok']) {
+            logger()->warning('Slot conflict on booking', [
                 'service_id'     => (int) $service['id'],
-                'customer_name'  => $input['name'],
-                'customer_email' => $input['email'],
-                'customer_phone' => $input['phone'],
                 'starts_at'      => $startsAtStr,
                 'ends_at'        => $endsAtStr,
-                'status'         => 'confirmed',
-                'notes'          => $input['notes'] !== '' ? $input['notes'] : null,
-                'cancel_token'   => $token,
+                'customer_email' => $input['email'],
             ]);
-
-            $db->commit();
-        } catch (\Throwable $e) {
-            if ($db->pdo()->inTransaction()) {
-                $db->rollBack();
-            }
-            throw $e;
+            flash('error', 'Sorry, that slot was just taken. Please pick another time.');
+            redirect('/book?service_id=' . (int) $service['id']);
         }
-        // ---------------------------------------------------------------------
+
+        /** @var int    $apptId */
+        $apptId = $result['id'];
+        /** @var string $token */
+        $token  = $result['token'];
+
+        // Repeat != none: turn this booking into the first instance of a
+        // recurring series. The expansion job materializes the rest.
+        if ($input['repeat'] !== 'none') {
+            $seriesId = AppointmentSeries::create([
+                'service_id'       => (int) $service['id'],
+                'customer_name'    => $input['name'],
+                'customer_email'   => $input['email'],
+                'customer_phone'   => $input['phone'],
+                'notes'            => $input['notes'] !== '' ? $input['notes'] : null,
+                'freq'             => $input['repeat'],
+                'byweekday'        => (int) $startsAt->format('w'),
+                'start_time'       => $startsAt->format('H:i:s'),
+                'duration_minutes' => (int) $service['duration_minutes'],
+                'starts_on'        => $input['date'],
+                'status'           => 'active',
+            ]);
+            Database::getInstance()->update('appointments', ['series_id' => $seriesId], ['id' => $apptId]);
+        }
 
         logger()->info('Booking created', [
             'appointment_id' => $apptId,
@@ -226,6 +224,7 @@ final class BookingController
             'starts_at'      => $startsAtStr,
             'user_id'        => current_user_id(),
             'customer_email' => $input['email'],
+            'repeat'         => $input['repeat'],
         ]);
 
         Mailer::queueConfirmation($apptId);
@@ -330,7 +329,8 @@ final class BookingController
     public function cancelDo(string $token): void
     {
         csrf_check();
-        $appt = $this->loadByToken($token);
+        $appt  = $this->loadByToken($token);
+        $scope = (string) ($_POST['scope'] ?? 'this');
 
         if ($appt['status'] !== 'cancelled') {
             Appointment::cancel((int) $appt['id']);
@@ -338,10 +338,22 @@ final class BookingController
                 'appointment_id' => (int) $appt['id'],
                 'starts_at'      => (string) $appt['starts_at'],
                 'customer_email' => (string) $appt['customer_email'],
+                'scope'          => $scope,
             ]);
             Mailer::queueCancellation((int) $appt['id']);
             WebhookDispatcher::dispatch('booking.cancelled', (int) $appt['id']);
-            flash('success', 'Your appointment has been cancelled.');
+
+            if ($appt['series_id'] !== null && $scope === 'all_future') {
+                AppointmentSeries::cancel((int) $appt['series_id']);
+                $n = Appointment::cancelFutureInSeries((int) $appt['series_id'], (int) $appt['id']);
+                logger()->info('Recurring series cancelled', [
+                    'series_id'            => (int) $appt['series_id'],
+                    'future_appts_cancelled' => $n,
+                ]);
+                flash('success', 'This appointment and all future ones in the series have been cancelled.');
+            } else {
+                flash('success', 'Your appointment has been cancelled.');
+            }
         } else {
             flash('info', 'This appointment was already cancelled.');
         }
@@ -490,7 +502,7 @@ final class BookingController
     /**
      * @return array{
      *   name:string, email:string, phone:string, notes:string,
-     *   terms:int, service_id:int, date:string, time:string
+     *   terms:int, service_id:int, date:string, time:string, repeat:string
      * }
      */
     private function extractFormInput(): array
@@ -504,6 +516,7 @@ final class BookingController
             'service_id' => (int)  ($_POST['service_id']        ?? 0),
             'date'       => (string) ($_POST['date']            ?? ''),
             'time'       => (string) ($_POST['time']            ?? ''),
+            'repeat'     => (string) ($_POST['repeat']          ?? 'none'),
         ];
     }
 
@@ -541,6 +554,9 @@ final class BookingController
         }
         if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', (string) $i['time'])) {
             $errors['time'] = 'Please pick a valid time.';
+        }
+        if (!in_array((string) $i['repeat'], ['none', ...AppointmentSeries::VALID_FREQS], true)) {
+            $errors['repeat'] = 'Please pick a valid repeat option.';
         }
         return $errors;
     }

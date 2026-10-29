@@ -26,10 +26,10 @@ INSERT INTO `users` (`name`, `email`, `password_hash`, `role`, `is_super`) VALUE
 -- Services (4 with different durations & prices)
 -- ------------------------------------------------------------
 INSERT INTO `services` (`name`, `description`, `duration_minutes`, `price`, `color`, `is_active`) VALUES
-    ('Quick Consultation', 'Short intro / Q&A session.',                      30,  35.00, '#3b82f6', 1),
-    ('Standard Appointment','Regular hour-long appointment.',                 60,  80.00, '#10b981', 1),
-    ('Follow-up Session',  'Mid-length follow-up appointment.',               45,  60.00, '#f59e0b', 1),
-    ('Extended Session',   'Deep-dive / extended consultation.',              90, 140.00, '#ef4444', 1);
+    ('Quick Consultation', 'Short intro / Q&A session.',                      30,  1500.00, '#3b82f6', 1),
+    ('Standard Appointment','Regular hour-long appointment.',                 60,  4000.00, '#10b981', 1),
+    ('Follow-up Session',  'Mid-length follow-up appointment.',               45,  3000.00, '#f59e0b', 1),
+    ('Extended Session',   'Deep-dive / extended consultation.',              90,  7000.00, '#ef4444', 1);
 
 -- ------------------------------------------------------------
 -- Business hours — Mon-Fri 09:00–18:00, Sat 10:00–14:00, Sun closed.
@@ -49,10 +49,10 @@ INSERT INTO `business_hours` (`day_of_week`, `open_time`, `close_time`, `is_clos
 -- ------------------------------------------------------------
 INSERT INTO `settings` (`key`, `value`) VALUES
     ('business_name',         'Slate Bookings'),
-    ('timezone',              'America/Toronto'),
+    ('timezone',              'Asia/Manila'),
     ('buffer_minutes',        '15'),   -- gap between back-to-back appointments
     ('advance_booking_days',  '30'),   -- how far ahead customers can book
     ('min_notice_hours',      '2'),    -- earliest allowed slot from "now"
     ('contact_email',         'admin@slate.test'),
-    ('contact_phone',         '+1-555-0100'),
-    ('location',              'In person · Toronto studio');
+    ('contact_phone',         '+63 917 123 4567'),
+    ('location',              'In person · Makati, Metro Manila');

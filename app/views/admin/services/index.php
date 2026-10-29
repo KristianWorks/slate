@@ -118,7 +118,7 @@ $presetsJson = htmlspecialchars(
                             <?php endif ?>
                         </td>
                         <td><?= (int) $svc['duration_minutes'] ?> min</td>
-                        <td>$<?= e(number_format((float) $svc['price'], 2)) ?></td>
+                        <td>&#8369;<?= e(number_format((float) $svc['price'], 2)) ?></td>
                         <td>
                             <span class="color-dot" style="background-color: <?= e((string) $svc['color']) ?>;"
                                   title="<?= e((string) $svc['color']) ?>"></span>
@@ -199,7 +199,7 @@ $presetsJson = htmlspecialchars(
                     </div>
 
                     <div class="field">
-                        <label for="svc-price">Price</label>
+                        <label for="svc-price">Price (&#8369;)</label>
                         <input id="svc-price" name="price" type="number" min="0" max="99999.99" step="0.01" required
                                x-model="form.price"
                                :class="{ 'is-invalid': errors.price }">

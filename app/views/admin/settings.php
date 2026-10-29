@@ -36,7 +36,7 @@ $val = function (string $key, string $default = '') use ($old, $settings): strin
         <div class="field">
             <label for="set-tz">Timezone</label>
             <select id="set-tz" name="timezone" class="<?= errors('timezone') !== null ? 'is-invalid' : '' ?>">
-                <?php $current = $val('timezone', 'UTC'); ?>
+                <?php $current = $val('timezone', 'Asia/Manila'); ?>
                 <?php foreach ($timezones as $tz): ?>
                     <option value="<?= e($tz) ?>" <?= $tz === $current ? 'selected' : '' ?>>
                         <?= e($tz) ?>

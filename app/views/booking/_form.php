@@ -81,6 +81,8 @@
         <label for="bf-phone">Phone</label>
         <?php if ($msg = errors('phone')): ?>
             <p class="field-error"><?= e($msg) ?></p>
+        <?php else: ?>
+            <p class="muted" style="font-size: 0.8rem; margin: 4px 0 0;">e.g. +63 912 345 6789 (international numbers welcome)</p>
         <?php endif ?>
     </div>
 

@@ -25,7 +25,7 @@
     </article>
 
     <article class="stat-card">
-        <div class="stat-num">$<?= e($monthRevenue) ?></div>
+        <div class="stat-num">&#8369;<?= e($monthRevenue) ?></div>
         <div class="stat-label">Revenue this month</div>
     </article>
 

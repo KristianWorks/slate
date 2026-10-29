@@ -50,7 +50,7 @@ $statusLabels = [
             <span class="panel-value">
                 <span class="color-dot" style="background-color: <?= e((string) $appt['service_color']) ?>;" aria-hidden="true"></span>
                 <?= e((string) $appt['service_name']) ?>
-                <span class="muted">&middot; <?= (int) $appt['service_duration'] ?> min &middot; $<?= e(number_format((float) $appt['service_price'], 2)) ?></span>
+                <span class="muted">&middot; <?= (int) $appt['service_duration'] ?> min &middot; &#8369;<?= e(number_format((float) $appt['service_price'], 2)) ?></span>
             </span>
         </div>
     </section>

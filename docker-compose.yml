@@ -1,0 +1,72 @@
+# Slate — local development stack
+#
+#   docker compose up --build
+#   open http://localhost:8080
+#
+# MySQL auto-loads /database/schema.sql then /database/seed.sql on its
+# first start (via docker-entrypoint-initdb.d). After that, the persistent
+# volume keeps your data across `docker compose down && up` cycles.
+# Reset everything with: docker compose down -v
+
+services:
+  app:
+    build: .
+    image: slate-app:dev
+    container_name: slate-app
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: Slate
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      APP_TIMEZONE: America/Toronto
+
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: slate
+      DB_USERNAME: slate
+      DB_PASSWORD: slate_secret
+
+      # Leave MAIL_* blank locally — Mailer logs failures and the booking
+      # flow keeps working. Plug in a real SMTP server before deploying.
+      MAIL_HOST: ""
+      MAIL_PORT: 587
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_ADDRESS: no-reply@slate.local
+      MAIL_FROM_NAME: "Slate Bookings"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Bind-mount the source tree for live-reload during development.
+      # In production, remove these two volume lines and run the baked image as-is.
+      - ./:/var/www/html
+      - slate-vendor:/var/www/html/vendor
+
+  db:
+    image: mysql:8.0
+    container_name: slate-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: slate
+      MYSQL_USER: slate
+      MYSQL_PASSWORD: slate_secret
+    ports:
+      - "3307:3306"   # 3307 on host to avoid colliding with a local MySQL
+    volumes:
+      - slate-mysql:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uslate", "-pslate_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  slate-mysql:
+  slate-vendor:

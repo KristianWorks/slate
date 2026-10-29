@@ -1,0 +1,39 @@
+{
+    "name": "Slate",
+    "short_name": "Slate",
+    "description": "Book online in seconds. Simple, fast appointment booking.",
+    "id": "/?source=pwa",
+    "start_url": "/?source=pwa",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["standalone", "minimal-ui"],
+    "orientation": "any",
+    "background_color": "#FAF8F5",
+    "theme_color": "#C84B31",
+    "lang": "en",
+    "dir": "ltr",
+    "categories": ["business", "productivity"],
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.svg",
+            "sizes": "32x32",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Book an appointment",
+            "short_name": "Book",
+            "description": "Jump straight to the booking calendar.",
+            "url": "/book",
+            "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+        }
+    ]
+}

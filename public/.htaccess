@@ -1,0 +1,67 @@
+# /public/.htaccess
+# Pretty URLs + security headers for the web root.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Skip rewrites for real files / directories (assets, uploads).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise hand off to the front controller.
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Don't serve directory listings.
+Options -Indexes
+
+# Hide PHP version banner.
+<IfModule mod_headers.c>
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+
+    # ---- Security headers (apply to every response from /public) ----
+
+    # Clickjacking protection — the app has no third-party embed needs.
+    Header always set X-Frame-Options "DENY"
+
+    # Disable MIME-type sniffing.
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Don't leak full URLs cross-origin.
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Disable powerful browser features we don't use.
+    Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
+
+    # Content Security Policy.
+    #
+    # 'unsafe-inline' + 'unsafe-eval' on script-src is required because:
+    #   - inline <script> blocks in our layouts wire up HTMX/CSRF + the
+    #     bookingApp / apptsApp Alpine components
+    #   - Alpine v3's CDN build evaluates x-data / @click expressions via
+    #     `new Function()`, which CSP categorises as eval
+    #
+    # See SECURITY.md → "Tightening CSP" for the refactor path to a strict
+    # policy (move inline scripts to /assets/js/ and switch to the
+    # alpinejs/dist/csp.min.js build).
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+    # HSTS — only when serving HTTPS (Apache exposes HTTPS=on under SSL).
+    SetEnvIf HTTPS on HTTPS_ON
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS_ON
+</IfModule>
+
+# Block access to dotfiles (.env, .git, etc.) and PHP fragments not meant
+# to be entry-points. The router only ever runs index.php; everything else
+# is a leaked artefact if reached.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

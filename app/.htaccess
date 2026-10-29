@@ -1,0 +1,13 @@
+# /app/.htaccess
+# Defense-in-depth: refuse any direct HTTP access to application source.
+# The root .htaccess forwards everything to /public, so requests should
+# never reach here — but if they did (misconfigured DocumentRoot, exposed
+# symlink, etc.), this would still refuse.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -1,0 +1,38 @@
+# Keep the image small + reproducible.
+.git
+.github
+.gitignore
+.gitattributes
+
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Never ship secrets into the image.
+.env
+.env.*
+!.env.example
+
+# Locally-installed deps are reinstalled inside the image.
+vendor/
+node_modules/
+
+# Mutable state.
+storage/cache/ratelimit/*
+!storage/cache/ratelimit/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+*.log
+
+# Docs + repo metadata aren't needed inside the runtime.
+README.md
+DEPLOYMENT.md
+SECURITY.md
+LICENSE
+docs/
+docker-compose.yml
+.dockerignore
+Dockerfile

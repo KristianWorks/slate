@@ -1,0 +1,16 @@
+/vendor/
+/node_modules/
+.env
+.env.*
+!.env.example
+/public/uploads/*
+!/public/uploads/.gitkeep
+/storage/cache/ratelimit/*
+!/storage/cache/ratelimit/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

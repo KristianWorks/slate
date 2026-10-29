@@ -1,0 +1,25 @@
+# /.htaccess
+# Front controller: forward every request into /public so the web root
+# does not need to be set to /public on shared hosting.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pass the Authorization header through (PHPMailer / Basic auth use it).
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect trailing slashes (if not a folder)...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Forward everything that is NOT already in /public into /public.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Deny direct access to dotfiles like .env, .git
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
